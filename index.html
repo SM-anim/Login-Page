@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Torchlight Mission Login 🔦</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: #020617; /* Extra dark void background */
+            transition: background 0.5s ease;
+        }
+
+        /* Smooth slide-in and settle for the stickman container */
+        .stickman-container {
+            transform: translateX(-600px); /* Start further outside the left screen boundary */
+            transition: transform 1.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .stickman-entered {
+            transform: translateX(0);
+        }
+
+        /* Flashlight beam opacity transitions */
+        .torch-beam {
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+            pointer-events: none;
+        }
+
+        .torch-on .torch-beam {
+            opacity: 1;
+        }
+
+        /* Dark silhouette state of the card */
+        .login-card-wrapper {
+            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 0.02;
+            filter: blur(15px) brightness(0.1);
+            pointer-events: none; /* No interaction when dark */
+            transform: scale(0.95);
+        }
+
+        /* ONLY illuminate the login card when stickman locates and locks onto it */
+        .card-illuminated .login-card-wrapper {
+            opacity: 1;
+            filter: blur(0px) brightness(1);
+            pointer-events: auto; /* Fully functional when illuminated */
+            transform: scale(1);
+        }
+
+        /* Panic Siren animation */
+        @keyframes siren {
+            0%, 100% { background-color: #7f1d1d; }
+            50% { background-color: #1e3a8a; }
+        }
+
+        .panic-active {
+            animation: siren 0.4s infinite !important;
+            background: none !important;
+        }
+
+        /* Eye movement styles */
+        .eye-container {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .eye {
+            width: 44px;
+            height: 44px;
+            background: white;
+            border-radius: 50%;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: inset 0 0 8px rgba(0,0,0,0.2);
+        }
+
+        .pupil {
+            width: 18px;
+            height: 18px;
+            background: #0f172a;
+            border-radius: 50%;
+            position: absolute;
+            transition: all 0.08s ease;
+        }
+
+        /* Runaway Button setup */
+        #submit-btn {
+            transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+
+        /* Dynamic instruction hint overlay */
+        .mission-hint {
+            color: #475569;
+            animation: pulseHint 2s infinite ease-in-out;
+            transition: opacity 0.3s ease;
+        }
+        .torch-on .mission-hint {
+            opacity: 0;
+            pointer-events: none;
+        }
+        @keyframes pulseHint {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 0.9; text-shadow: 0 0 8px rgba(56, 189, 248, 0.3); }
+        }
+
+        /* STICKMAN ANIMATION STYLES */
+        @keyframes run-leg-l {
+            0%, 100% { transform: rotate(-35deg); }
+            50% { transform: rotate(35deg); }
+        }
+        @keyframes run-leg-r {
+            0%, 100% { transform: rotate(35deg); }
+            50% { transform: rotate(-35deg); }
+        }
+        @keyframes run-arm-l {
+            0%, 100% { transform: rotate(-20deg); }
+            50% { transform: rotate(20deg); }
+        }
+        @keyframes bounce-body {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-4px); }
+        }
+        @keyframes shiver {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            25% { transform: translate(-1px, 1px) rotate(-0.5deg); }
+            75% { transform: translate(1px, -1px) rotate(0.5deg); }
+        }
+
+        .running .leg-l {
+            animation: run-leg-l 0.25s infinite linear;
+        }
+        .running .leg-r {
+            animation: run-leg-r 0.25s infinite linear;
+        }
+        .running .arm-l {
+            animation: run-arm-l 0.25s infinite linear;
+        }
+        .running .stickman-body-group {
+            animation: bounce-body 0.25s infinite linear;
+        }
+        .shivering-stickman {
+            animation: shiver 0.12s infinite linear !important;
+        }
+
+        /* Winning Celebration Jump Animation */
+        @keyframes win-jump {
+            0%, 100% { transform: translateY(0) scaleY(1); }
+            10% { transform: translateY(5px) scaleY(0.85); } /* Squash before jump */
+            50% { transform: translateY(-110px) scaleY(1.15); } /* Stretch at peak */
+            75% { transform: translateY(10px) scaleY(0.9); } /* Landing impact */
+        }
+
+        .jumping {
+            animation: win-jump 0.7s cubic-bezier(0.25, 1, 0.5, 1) 2; /* Jumps twice in celebration! */
+            transform-origin: bottom center;
+        }
+
+        /* Custom speech bubble tail pointing downwards left */
+        .bubble-tail::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 24px;
+            border-width: 8px 8px 0;
+            border-style: solid;
+            border-color: #1e293b transparent;
+            display: block;
+            width: 0;
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col items-center justify-center overflow-hidden select-none px-4">
+
+    <!-- Main Workspace Container linking Stickman and Login Card -->
+    <div id="main-scene" class="relative w-full max-w-[950px] h-[550px] flex flex-col md:flex-row items-center justify-center gap-8 md:gap-0">
+        
+        <!-- STICKMAN CONTAINER (Shining torch directly onto the login page) -->
+        <div id="stickman-actor" class="stickman-container absolute md:left-4 bottom-0 w-[450px] h-[400px] z-20 pointer-events-none">
+            
+            <!-- Dialogue Speech Bubble -->
+            <div id="stickman-bubble" class="absolute top-[20px] left-[60px] bg-slate-800 text-white text-[11px] md:text-xs font-semibold p-3 rounded-xl border border-slate-700 shadow-lg w-[190px] opacity-0 transition-opacity duration-300 bubble-tail text-center leading-relaxed">
+                Scanning sector... 🕵️‍♂️
+            </div>
+
+            <!-- SVG representation of Stickman and his Conical Torchlight Beam -->
+            <svg width="100%" height="100%" viewBox="0 0 450 400" class="overflow-visible">
+                <defs>
+                    <!-- Gorgeous Golden Flashlight Beam Gradient -->
+                    <linearGradient id="torch-glow" x1="0%" y1="50%" x2="100%" y2="50%">
+                        <stop offset="0%" stop-color="#fef08a" stop-opacity="0.38" />
+                        <stop offset="40%" stop-color="#fef08a" stop-opacity="0.18" />
+                        <stop offset="100%" stop-color="#fef08a" stop-opacity="0" />
+                    </linearGradient>
+                </defs>
+
+                <!-- Stickman Body Structure -->
+                <g class="stickman-body-group">
+                    <!-- Head with neon glowing aura -->
+                    <circle cx="80" cy="150" r="14" fill="none" stroke="#38bdf8" stroke-width="5" />
+                    <circle cx="80" cy="150" r="14" fill="#020617" />
+                    
+                    <!-- Spine -->
+                    <line x1="80" y1="164" x2="80" y2="225" stroke="#38bdf8" stroke-width="5" stroke-linecap="round" />
+                    
+                    <!-- Left Arm (Active swing during running animation) -->
+                    <line class="arm-l" x1="80" y1="174" x2="55" y2="210" stroke="#38bdf8" stroke-width="4.5" stroke-linecap="round" style="transform-origin: 80px 174px;" />
+                    
+                    <!-- Right Arm holding the Flashlight pointing right (Beam is now nested inside to rotate with the arm!) -->
+                    <g id="arm-r-group" style="transform-origin: 80px 174px; transition: transform 0.5s ease-out;">
+                        <!-- Dynamic Conical Torchlight Beam that rotates perfectly with the arm (Slightly widened and elevated for a direct centered hit) -->
+                        <polygon points="120,202 750,-100 750,500" fill="url(#torch-glow)" class="torch-beam" style="transform-origin: 80px 174px;" />
+                        
+                        <!-- Arm segment -->
+                        <line x1="80" y1="174" x2="105" y2="200" stroke="#38bdf8" stroke-width="5" stroke-linecap="round" />
+                        <!-- Hand holding flashlight -->
+                        <circle cx="105" cy="200" r="4" fill="#38bdf8" />
+                        <!-- Torch Device -->
+                        <g transform="translate(100, 192) rotate(10)">
+                            <rect x="0" y="2" width="20" height="8" rx="2" fill="#475569" />
+                            <path d="M 20 0 L 28 -4 L 28 16 L 20 12 Z" fill="#94a3b8" />
+                            <!-- Golden emitting lens -->
+                            <ellipse cx="28" cy="6" rx="2" ry="7" fill="#fef08a" />
+                        </g>
+                    </g>
+                </g>
+
+                <!-- Left Leg -->
+                <g class="leg-l" style="transform-origin: 80px 225px;">
+                    <line x1="80" y1="225" x2="68" y2="265" stroke="#38bdf8" stroke-width="5" stroke-linecap="round" />
+                    <line x1="68" y1="265" x2="52" y2="305" stroke="#38bdf8" stroke-width="4.5" stroke-linecap="round" />
+                </g>
+
+                <!-- Right Leg -->
+                <g class="leg-r" style="transform-origin: 80px 225px;">
+                    <line x1="80" y1="225" x2="96" y2="265" stroke="#38bdf8" stroke-width="5" stroke-linecap="round" />
+                    <line x1="96" y1="265" x2="112" y2="305" stroke="#38bdf8" stroke-width="4.5" stroke-linecap="round" />
+                </g>
+            </svg>
+        </div>
+
+        <!-- Login Page Card Wrapper (Aligns perfectly in the beam's projection zone) -->
+        <div class="login-card-wrapper md:ml-[320px] z-10">
+            <div id="login-card" class="bg-slate-900/90 backdrop-blur-md p-8 rounded-2xl border border-slate-800 shadow-2xl w-[350px] text-center relative transition-all duration-300">
+                
+                <!-- Interactive Sneaky Eyes -->
+                <div class="eye-container">
+                    <div class="eye">
+                        <div class="pupil" id="pupil-l"></div>
+                    </div>
+                    <div class="eye">
+                        <div class="pupil" id="pupil-r"></div>
+                    </div>
+                </div>
+
+                <!-- Minimalistic Warning/Feedback Box -->
+                <div id="feedback-msg" class="hidden text-xs font-medium mb-4 p-2.5 rounded-lg border bg-slate-950 transition-all duration-300"></div>
+
+                <!-- Minimal Form with only Username and Password fields -->
+                <form id="login-form" class="space-y-4 text-left" onsubmit="event.preventDefault(); handleLogin();">
+                    
+                    <!-- Username Input -->
+                    <div>
+                        <label class="block text-slate-400 text-[11px] font-semibold mb-1.5 uppercase tracking-wider" for="username">Username</label>
+                        <div class="relative">
+                            <span class="absolute left-3.5 top-3 text-slate-500 text-xs"><i class="fa-solid fa-user"></i></span>
+                            <input type="text" id="username" required
+                                class="w-full bg-slate-950 border border-slate-800 text-white pl-10 pr-4 py-2.5 rounded-xl text-xs md:text-sm focus:outline-none focus:border-indigo-500 transition"
+                                placeholder="Enter Username" autocomplete="off">
+                        </div>
+                    </div>
+
+                    <!-- Password Input -->
+                    <div>
+                        <label class="block text-slate-400 text-[11px] font-semibold mb-1.5 uppercase tracking-wider" for="password">Password</label>
+                        <div class="relative">
+                            <span class="absolute left-3.5 top-3 text-slate-500 text-xs"><i class="fa-solid fa-lock"></i></span>
+                            <input type="password" id="password" required
+                                class="w-full bg-slate-950 border border-slate-800 text-white pl-10 pr-10 py-2.5 rounded-xl text-xs md:text-sm focus:outline-none focus:border-indigo-500 transition"
+                                placeholder="Enter Password">
+                            <button type="button" onclick="togglePassword()" class="absolute right-3 top-3.5 text-slate-500 hover:text-white text-xs transition">
+                                <i id="eye-icon" class="fa-solid fa-eye-slash"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Submit Button Area -->
+                    <div class="pt-2 min-h-[50px] relative overflow-visible">
+                        <button type="submit" id="submit-btn"
+                            class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 px-4 rounded-xl text-xs md:text-sm transition duration-200 shadow-lg shadow-indigo-600/20">
+                            Sign In
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Replay Intro Utility Button -->
+    <button onclick="restartCinematic()" class="absolute bottom-4 right-4 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5 transition">
+        <i class="fa-solid fa-rotate-right"></i> Replay Scan Sequence
+    </button>
+
+    <script>
+        let audioCtx;
+        let alarmInterval;
+        let torchActive = false;
+        let introFinished = false;
+
+        // Sound Generator for Flashlight Switch Click
+        function playClickSound() {
+            try {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+                
+                let osc = audioCtx.createOscillator();
+                let gain = audioCtx.createGain();
+                
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(120, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 0.04);
+                
+                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.04);
+                
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.04);
+            } catch (e) {
+                console.log("Audio not supported or blocked: ", e);
+            }
+        }
+
+        // Alarm Siren Sound Generator
+        function playSirenSound() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            
+            let osc = audioCtx.createOscillator();
+            let gain = audioCtx.createGain();
+            
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+            osc.frequency.linearRampToValueAtTime(880, audioCtx.currentTime + 0.25);
+            osc.frequency.linearRampToValueAtTime(440, audioCtx.currentTime + 0.5);
+            
+            gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+            
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.5);
+        }
+
+        // Synthesize dynamic agent footstep audio
+        function playStepSound() {
+            if (!audioCtx) return;
+            try {
+                let osc = audioCtx.createOscillator();
+                let gain = audioCtx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(80, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 0.08);
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.08);
+            } catch(e){}
+        }
+
+        // Synthesize flashlight static buzz spark sound
+        function playFlashlightBuzz() {
+            if (!audioCtx) return;
+            try {
+                let osc = audioCtx.createOscillator();
+                let gain = audioCtx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(180, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.05);
+            } catch(e){}
+        }
+
+        // Synthesize cheerful winning celebration melody (ascending arpeggio notes)
+        function playCelebrationSound() {
+            if (!audioCtx) return;
+            try {
+                const notes = [261.63, 329.63, 392.00, 523.25]; // C4, E4, G4, C5 (Happy chord)
+                const durations = [0.08, 0.08, 0.08, 0.25];
+                const delays = [0, 0.09, 0.18, 0.27];
+                
+                notes.forEach((freq, i) => {
+                    let osc = audioCtx.createOscillator();
+                    let gain = audioCtx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, audioCtx.currentTime + delays[i]);
+                    gain.gain.setValueAtTime(0.12, audioCtx.currentTime + delays[i]);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + delays[i] + durations[i]);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(audioCtx.currentTime + delays[i]);
+                    osc.stop(audioCtx.currentTime + delays[i] + durations[i]);
+                });
+            } catch(e){}
+        }
+
+        const pupils = document.querySelectorAll('.pupil');
+        const mainScene = document.getElementById('main-scene');
+
+        // Dynamic eyeball coordination pointing at cursor
+        document.addEventListener('mousemove', (e) => {
+            if (!torchActive) return;
+
+            pupils.forEach(pupil => {
+                const eye = pupil.parentElement;
+                const rect = eye.getBoundingClientRect();
+                const eyeX = rect.left + rect.width / 2;
+                const eyeY = rect.top + rect.height / 2;
+                
+                const angle = Math.atan2(e.clientY - eyeY, e.clientX - eyeX);
+                const distance = Math.min(8, Math.hypot(e.clientX - eyeX, e.clientY - eyeY) / 15);
+                
+                const targetX = Math.cos(angle) * distance;
+                const targetY = Math.sin(angle) * distance;
+                
+                pupil.style.transform = `translate(${targetX}px, ${targetY}px)`;
+            });
+        });
+
+        const passwordInput = document.getElementById('password');
+        const usernameInput = document.getElementById('username');
+        const submitBtn = document.getElementById('submit-btn');
+        const feedbackMsg = document.getElementById('feedback-msg');
+        let attempts = 0;
+
+        let btnX = 0;
+        let btnY = 0;
+        const avoidThreshold = 125; // Increased sensitivity threshold to detect approaching mouse earlier
+
+        // Fast helper to check if current credentials are secure
+        function isCredentialsWeak() {
+            const passVal = passwordInput.value;
+            const userVal = usernameInput.value;
+            return (passVal.length < 6 || passVal === '123456' || !userVal);
+        }
+
+        function showFeedback(text, type = 'warning') {
+            feedbackMsg.classList.remove('hidden', 'border-amber-500/30', 'text-amber-400', 'bg-amber-950/20', 'border-emerald-500/30', 'text-emerald-400', 'bg-emerald-950/20', 'border-red-500/30', 'text-red-400', 'bg-red-950/20');
+            
+            if (type === 'warning') {
+                feedbackMsg.classList.add('border-amber-500/30', 'text-amber-400', 'bg-amber-950/20');
+            } else if (type === 'success') {
+                feedbackMsg.classList.add('border-emerald-500/30', 'text-emerald-400', 'bg-emerald-950/20');
+            } else if (type === 'error') {
+                feedbackMsg.classList.add('border-red-500/30', 'text-red-400', 'bg-red-950/20');
+            }
+            
+            feedbackMsg.innerText = text;
+            feedbackMsg.classList.remove('hidden');
+        }
+
+        function hideFeedback() {
+            feedbackMsg.classList.add('hidden');
+        }
+
+        // Instant high-impulse push to escape any fast mouse sweeps
+        function pushButtonAway(mouseX, mouseY) {
+            const rect = submitBtn.getBoundingClientRect();
+            const btnCenterX = rect.left + rect.width / 2;
+            const btnCenterY = rect.top + rect.height / 2;
+
+            let angle = Math.atan2(btnCenterY - mouseY, btnCenterX - mouseX);
+            
+            // Safe fallback if mouse coordinates land exactly at button center
+            if (isNaN(angle) || (Math.abs(mouseX - btnCenterX) < 2 && Math.abs(mouseY - btnCenterY) < 2)) {
+                angle = Math.random() * Math.PI * 2;
+            }
+
+            // Strong velocity multiplier to slide away instantly
+            const force = 150; 
+            btnX += Math.cos(angle) * force;
+            btnY += Math.sin(angle) * force;
+
+            // Safe boundaries to prevent button from running completely off the viewport
+            const pad = 40;
+            const absoluteX = rect.left + btnX;
+            const absoluteY = rect.top + btnY;
+
+            if (absoluteX < pad) {
+                btnX = pad - rect.left;
+            } else if (absoluteX > window.innerWidth - rect.width - pad) {
+                btnX = window.innerWidth - rect.width - pad - rect.left;
+            }
+
+            if (absoluteY < pad) {
+                btnY = pad - rect.top;
+            } else if (absoluteY > window.innerHeight - rect.height - pad) {
+                btnY = window.innerHeight - rect.height - pad - rect.top;
+            }
+
+            submitBtn.style.transform = `translate(${btnX}px, ${btnY}px)`;
+            showFeedback("Weak credentials! The 'Sign In' button refuses to cooperate.", "warning");
+        }
+
+        // Magnetic repulsion physics loop on general cursor moves
+        document.addEventListener('mousemove', (e) => {
+            if (!torchActive) return; 
+
+            if (isCredentialsWeak()) {
+                const rect = submitBtn.getBoundingClientRect();
+                const btnCenterX = rect.left + rect.width / 2;
+                const btnCenterY = rect.top + rect.height / 2;
+
+                const distance = Math.hypot(e.clientX - btnCenterX, e.clientY - btnCenterY);
+
+                if (distance < avoidThreshold) {
+                    pushButtonAway(e.clientX, e.clientY);
+                }
+            }
+        });
+
+        // Bulletproof Event Listeners directly binded to the button to stop any cheat attempt
+        submitBtn.addEventListener('mouseover', (e) => {
+            if (torchActive && isCredentialsWeak()) {
+                pushButtonAway(e.clientX, e.clientY);
+            }
+        });
+
+        submitBtn.addEventListener('mouseenter', (e) => {
+            if (torchActive && isCredentialsWeak()) {
+                pushButtonAway(e.clientX, e.clientY);
+            }
+        });
+
+        submitBtn.addEventListener('mousedown', (e) => {
+            if (torchActive && isCredentialsWeak()) {
+                e.preventDefault();
+                pushButtonAway(e.clientX, e.clientY);
+            }
+        });
+
+        submitBtn.addEventListener('click', (e) => {
+            if (torchActive && isCredentialsWeak()) {
+                e.preventDefault();
+                e.stopPropagation();
+                pushButtonAway(e.clientX, e.clientY);
+                return false;
+            }
+        });
+
+        // Reset button coordinates once inputs qualify
+        function validateAndReset() {
+            if (passwordInput.value.length >= 6 && passwordInput.value !== '123456' && usernameInput.value) {
+                resetButton();
+            }
+        }
+
+        passwordInput.addEventListener('input', validateAndReset);
+        usernameInput.addEventListener('input', validateAndReset);
+
+        function resetButton() {
+            btnX = 0;
+            btnY = 0;
+            submitBtn.style.transform = `translate(0px, 0px)`;
+            hideFeedback();
+        }
+
+        // Show/Hide Password Toggle
+        function togglePassword() {
+            if (!torchActive) return;
+            const eyeIcon = document.getElementById('eye-icon');
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                eyeIcon.className = "fa-solid fa-eye";
+                showFeedback("Now I can peek at your secret! 👁️", "warning");
+            } else {
+                passwordInput.type = 'password';
+                eyeIcon.className = "fa-solid fa-eye-slash";
+                hideFeedback();
+            }
+        }
+
+        // Trigger Alarm Panic Mode on multiple failed logins
+        function triggerPanic() {
+            document.body.classList.add('panic-active');
+            showFeedback("UNAUTHORIZED ACCESS DETECTED! INITIATING LOCKDOWN! 🚨", "error");
+            
+            // Make stickman panic too
+            stickman.classList.add('shivering-stickman');
+            bubble.innerText = "OH NO! THE COPS! RUN FOR IT! 🚔";
+            
+            if (alarmInterval) clearInterval(alarmInterval);
+            playSirenSound();
+            alarmInterval = setInterval(playSirenSound, 500);
+
+            setTimeout(() => {
+                document.body.classList.remove('panic-active');
+                stickman.classList.remove('shivering-stickman');
+                bubble.innerText = "Phew... that was a close one. I'll keep holding the light.";
+                clearInterval(alarmInterval);
+                resetButton();
+            }, 6000);
+        }
+
+        // Mock Submission Handler
+        function handleLogin() {
+            if (!torchActive) return;
+            attempts++;
+            if (attempts >= 2) {
+                triggerPanic();
+            } else {
+                showFeedback("Access Denied! Intruder detected in database.", "error");
+                passwordInput.value = '';
+            }
+        }
+
+        // Typing speed monitor
+        let lastKeyTime = Date.now();
+        passwordInput.addEventListener('keydown', () => {
+            if (!torchActive) return;
+            const now = Date.now();
+            const speed = now - lastKeyTime;
+            lastKeyTime = now;
+            
+            if (speed < 65) {
+                showFeedback("Whoa, typing speed is inhuman! Bot detected! 🤖", "warning");
+            }
+        });
+
+        const stickman = document.getElementById('stickman-actor');
+        const bubble = document.getElementById('stickman-bubble');
+        const armRightGroup = document.getElementById('arm-r-group');
+
+        function startCinematic() {
+            // Setup Audio Context trigger on viewport body
+            document.body.addEventListener('click', () => {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }, { once: true });
+
+            // Prepare base state
+            torchActive = false;
+            introFinished = false;
+            stickman.classList.remove('stickman-entered', 'shivering-stickman', 'running', 'jumping');
+            mainScene.classList.remove('torch-on', 'card-illuminated');
+            bubble.style.opacity = "0";
+            armRightGroup.style.transform = "rotate(-45deg)"; // Reset arm pointing slightly up-left initially
+
+            // Begin Running Entry from deep off-screen left
+            setTimeout(() => {
+                stickman.classList.add('running');
+                stickman.classList.add('stickman-entered');
+                
+                // Synthesize step loops
+                let stepTimer = setInterval(() => {
+                    if (stickman.classList.contains('running')) {
+                        playStepSound();
+                    } else {
+                        clearInterval(stepTimer);
+                    }
+                }, 130);
+            }, 100);
+
+            // Arrive and settle down, start looking/searching around
+            setTimeout(() => {
+                stickman.classList.remove('running');
+                bubble.innerText = "Searching... 🔍";
+                bubble.style.opacity = "1";
+                
+                // Flashlight Flickering sequence
+                flickerFlashlight(() => {
+                    // Flashlight turns on
+                    mainScene.classList.add('torch-on');
+                    playClickSound();
+
+                    // Step 1: Scan upwards (Light beam points beautifully to the sky)
+                    armRightGroup.style.transform = "rotate(-45deg)";
+                    bubble.innerText = "Scanning sky... 🌌";
+
+                    // Step 2: Scan downwards after a delay (Light beam points down to the ground)
+                    setTimeout(() => {
+                        armRightGroup.style.transform = "rotate(40deg)";
+                        bubble.innerText = "Scanning ground... 🔎";
+                    }, 1800);
+
+                    // Step 3: Find the card directly centered and point torchlight at it
+                    setTimeout(() => {
+                        // Point directly at the card (Adjusted from 10deg to -6deg to perfectly hit the login card center!)
+                        armRightGroup.style.transform = "rotate(-6deg)";
+                        torchActive = true;
+                        
+                        // Adjust ambient lighting
+                        document.body.style.background = 'radial-gradient(circle at 45% 40%, #0d1527 0%, #020617 100%)';
+                        
+                        // Trigger alert eye boxes
+                        document.getElementById('pupil-l').parentElement.style.boxShadow = "inset 0 0 10px rgba(254, 240, 138, 0.8), 0 0 15px rgba(254, 240, 138, 0.4)";
+                        document.getElementById('pupil-r').parentElement.style.boxShadow = "inset 0 0 10px rgba(254, 240, 138, 0.8), 0 0 15px rgba(254, 240, 138, 0.4)";
+                        
+                        // ONLY reveal the login page now that we've pointed at it!
+                        mainScene.classList.add('card-illuminated');
+                        bubble.innerText = "Found it! 🎯";
+
+                        // Step 4: Perform the winning jump celebration!
+                        setTimeout(() => {
+                            stickman.classList.add('jumping');
+                            playCelebrationSound();
+                            bubble.innerText = "HURRAH! 🎉💃";
+
+                            // Remove jumping class and settle down after animation completes
+                            setTimeout(() => {
+                                stickman.classList.remove('jumping');
+                                bubble.innerText = "Ready! 😎";
+                            }, 1400);
+
+                        }, 1200);
+
+                    }, 3600);
+                });
+
+            }, 1800);
+        }
+
+        // Flicker Flashlight Effect
+        function flickerFlashlight(callback) {
+            let flickers = 0;
+            let active = false;
+            
+            let flickerInterval = setInterval(() => {
+                active = !active;
+                if (active) {
+                    mainScene.classList.add('torch-on');
+                    playFlashlightBuzz();
+                } else {
+                    mainScene.classList.remove('torch-on');
+                }
+                flickers++;
+                
+                if (flickers >= 6) {
+                    clearInterval(flickerInterval);
+                    callback();
+                }
+            }, 100);
+        }
+
+        // Restart helper
+        function restartCinematic() {
+            document.body.style.background = '#020617';
+            resetButton();
+            startCinematic();
+        }
+
+        // Initialize on frame completion
+        window.onload = function() {
+            startCinematic();
+        };
+    </script>
+</body>
+</html>
